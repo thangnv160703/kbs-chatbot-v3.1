@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+	<meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Tu van nghe nghiep</title>
+	<!-- <link rel="stylesheet" href="{{ asset('style.css') }}"> -->
+	<!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script> -->
+
+	<style>
+		body {
+			font-family: Garamond;
+			/*font-family: monospace;*/
+		}
+
+		h1 {
+			color: black;
+			margin-bottom: 0;
+			margin-top: 0;
+			text-align: center;
+			font-size: 40px;
+		}
+
+		h3 {
+			color: black;
+			font-size: 20px;
+			margin-top: 3px;
+			text-align: center;
+		}
+
+		#chatbox {
+			margin-left: auto;
+			margin-right: auto;
+			width: 40%;
+			margin-top: 60px;
+		}
+
+		#userInput {
+			margin-left: auto;
+			margin-right: auto;
+			width: 40%;
+			margin-top: 60px;
+		}
+
+		#textInput {
+			width: 100%;
+			/*border: 3px solid #009688;*/
+			/*border-bottom: 3px solid #009688;*/
+			font-family: monospace;
+			font-size: 17px;
+		}
+
+		#buttonInput {
+			padding: 3px;
+			font-family: monospace;
+			font-size: 17px;
+		}
+
+		button {
+			background: powderblue;
+			height: auto;
+			width: 100%;
+			text-align: center;
+			border-radius: 10px;
+			color: black;
+
+			padding: 5px;
+		}
+
+		.chosen {
+			background: deepskyblue;
+		}
+
+		.unchosen {
+			background: powderblue;
+		}
+
+		.userText {
+			color: white;
+			font-family: monospace;
+			font-size: 17px;
+			text-align: right;
+			line-height: 30px;
+		}
+
+		.userText span {
+			background-color: deepskyblue;
+			padding: 10px;
+			border-radius: 20px;
+		}
+
+		.botText {
+			color: black;
+			/*
+			width: 70%;
+			background-color: lightgrey;
+			border-radius: 20px;
+			padding: 10px;
+			*/
+
+			font-family: monospace;
+			font-size: 17px;
+			text-align: left;
+			line-height: 30px;
+		}
+
+		.botText span {
+			background-color: lightgrey;
+			padding: 10px;
+			border-radius: 20px;
+		}
+
+		#tidbit {
+			position: absolute;
+			bottom: 0;
+			right: 0;
+			width: 300px;
+		}
+		
+		div.fixed{
+			position: fixed;
+			bottom: 5%;
+			left: 1%;
+			width: 20%;
+			font-family: monospace;
+			font-size: 17px;
+			/* border: 3px solid slategrey; */
+		}
+	</style>
+</head>
+
+<body>
+	<h1>Tư vấn nghề nghiệp</h1>
+	<div>
+		<div id="chatbox">
+			<p class="botText">
+				<!-- <span>Ban can gi?</span> -->
+			</p>
+		</div>
+		<div id="userInput">
+			<div id="textInput">
+				<!--
+				<button type="button" id="p01" th:text="'Kich Ban 1'" onclick="executeType1()"></button><br>
+				<button type="button" id="p02" th:text="'Kich Ban 2'"></button><br>
+				-->
+			</div>
+		</div>
+		<div class="fixed"> 
+			<span id="detail"></span> 
+		</div>
+
+		<script>
+			function Result(name, kq) {
+				this.name = name;
+				this.kq = kq;
+			}
+
+			var dsCauHoi = [];
+			var kiNang = [];
+			var kienThuc = [];
+			var ketQua = [];
+			var fav_knowledge = [], learned_knowledge = [], used_skill = [], used_knowledge = [];
+			var laborAge = true, edu_lvl = 0, willing_edu_lvl = 0;
+			var cur, len;
+			getCauHoi();
+
+			// Lay toan bo cau hoi tu server
+			function getCauHoi() {
+				var url = '/question';
+				var xhr = new XMLHttpRequest();
+				xhr.open("POST", url, true);
+				xhr.setRequestHeader("Content-Type", "application/json");
+				xhr.send();
+
+				xhr.onreadystatechange = function () {
+					if (xhr.readyState === 4 && xhr.status === 200) {
+						dsCauHoi = JSON.parse(this.responseText);
+						console.log(dsCauHoi);
+						start();
+					}
+				}
+			}
+
+			// Bat dau chay
+			function start() {
+				cur = 0;
+				len = dsCauHoi.length;
+				kiNang = [];
+				kienThuc = [];
+				ketQua = [];
+				fav_knowledge = [], learned_knowledge = [], used_skill = [], used_knowledge = [];
+				laborAge = false, edu_lvl = 0, willing_edu_lvl = 0;
+				
+				parent = document.getElementById("textInput");
+				parent.replaceChildren();
+				
+				showBotText("Bạn cần gì?");
+				var btn = createConfirm("Tư vấn hướng nghiệp");
+				btn.id = "start";
+				btn.addEventListener("click", function(){
+					execution();
+				});
+			}
+
+			function execution(stt) {
+				showResponse(document.getElementById('start').innerHTML);
+				// question_list = kichBan_list[stt].questions;
+				askQuestion();
+				// console.log(kichBan_list);
+			}
+
+			function askQuestion() {
+				showBotText(dsCauHoi[cur].moTa);
+				showLuaChon(dsCauHoi[cur].luaChon);
+				var btn = createConfirm("Tiếp tục");
+				btn.addEventListener("click", function () {
+					response();
+				});
+				// confirm();
+			}
+
+			function showLuaChon(dsLuaChon) {
+				var para = document.createElement('div');
+				para.id = 'textInput';
+				for (let i = 0; i < dsLuaChon.length; ++i) {
+					var btn = createChoice(dsLuaChon[i].moTa);
+					btn.id = dsLuaChon[i].id;
+
+					// para.appendChild(createLuaChon(dsLuaChon[i]));
+
+					para.appendChild(btn);
+					para.append(document.createElement('br'));
+				}
+
+				var parent = document.getElementById('userInput');
+				var child = document.getElementById('textInput');
+
+				parent.replaceChild(para, child);
+			}
+
+			function response() {
+				var x = calculate();
+				ketQua.push(x);
+				showResponse(dsCauHoi[cur].loai + " = " + x.kq);
+				if (cur < len - 1) {
+					cur = cur + 1;
+					askQuestion();
+				}
+				else {
+					console.log(ketQua);
+					sendJSON(ketQua);
+				}
+			}
+
+			function calculate() {
+				var dsLuaChon = dsCauHoi[cur].luaChon;
+				var id = dsCauHoi[cur].id;
+				var sum = 0;
+				var len = dsLuaChon.length;
+				for (let i = 0; i < len; ++i) {
+					x = document.getElementById(dsLuaChon[i].id);
+					if (x.className == "chosen") {
+						sum += dsLuaChon[i].chon;
+					}
+					else {
+						sum += dsLuaChon[i].khongChon;
+					}
+				}
+				return new Result(dsCauHoi[cur].id, sum);
+			}
+
+			function sendJSON(object) {
+				var url = '/answer';
+				var xhr = new XMLHttpRequest();
+				xhr.open("POST", url, true);
+				xhr.setRequestHeader("Content-Type", "application/json");
+				var data = JSON.stringify(object);
+				xhr.send(data);
+
+				var dieuKien = "";
+				xhr.onreadystatechange = function () {
+					if (xhr.readyState === 4 && xhr.status === 200) {
+						dieuKien = this.responseText
+						showResult(dieuKien);
+					}
+				}
+			}
+
+			function showResult(json) {
+				var dieuKien = JSON.parse(json);
+				console.log(dieuKien);
+				kiNang = dieuKien.kiNang;
+				kienThuc = dieuKien.kienThuc;
+				askAge();
+			}
+
+			function askAge() {
+				showBotText("Bạn bao nhiêu tuổi?");
+				var parent = document.getElementById("textInput");
+				parent.replaceChildren();
+				var btn1 = createConfirm("Dưới 13 tuổi");
+				btn1.addEventListener("click", function(){
+					laborAge = false;
+					showResponse("Dưới 13 tuổi");
+					askQ01();
+				});
+				var btn2 = createConfirm("13 tuổi trở lên");
+				btn2.addEventListener("click", function(){
+					laborAge = true;
+					showResponse("13 tuổi trở lên");
+					askQ01();
+				});
+			}
+			
+			function askQ01(){
+				if(kienThuc.length == 0){
+					if(laborAge == true){
+						askQ02();
+					}
+					else{
+						askQ03();
+					}
+				}else{
+					showBotText("Bạn thấy hứng thú với những lĩnh vực nào sau đây?");
+					var parent = document.getElementById("textInput");
+					parent.replaceChildren();
+					for(let i=0; i<kienThuc.length; ++i){
+						var btn = createChoice(kienThuc[i].linhVuc);
+						
+						btn.id = kienThuc[i].id;
+						
+						btn.addEventListener("mouseover", function(){
+							var d = document.getElementById("detail");
+							d.innerHTML = kienThuc[i].moTa;
+						});
+						
+						btn.addEventListener("mouseout", function(){
+							var d = document.getElementById("detail");
+							d.innerHTML = "";
+						});
+						
+						parent.appendChild(btn);
+						parent.append(document.createElement("br"));
+					}
+					var c_btn = createConfirm("Tiếp tục");
+					c_btn.addEventListener("click", function(){
+						responseQ01();
+					});
+				}
+			}
+			
+			function responseQ01(){
+				for(let i=0; i<kienThuc.length; ++i){
+					var x = document.getElementById(kienThuc[i].id);
+					if(x.className == "chosen"){
+						fav_knowledge.push(kienThuc[i].id);
+					}
+				}
+				console.log(fav_knowledge);
+				if(laborAge == true){
+					askQ02();
+				}
+				else{
+					askQ03();
+				}
+			}
+			
+			function askQ02(){
+				showBotText("Trình độ học vấn?");
+				var parent = document.getElementById("textInput");
+				parent.replaceChildren();
+				
+				var btn1 = createConfirm("Đã hoàn thành GD bắt buộc (cấp 1)");
+				btn1.addEventListener("click", function(){
+					showResponse("GD bắt buộc");
+					edu_lvl = 0;
+					askQ03();
+				});
+				var btn2 = createConfirm("Đã hoàn thành GD phổ thông (cấp 3)");
+				btn2.addEventListener("click", function(){
+					showResponse("GD pho thong");
+					edu_lvl = 1;
+					askQ03();
+				});
+				var btn3 = createConfirm("Đã tốt nghiệp cao đẳng, đại học hoặc hơn");
+				btn3.addEventListener("click", function(){
+					showResponse("Cao đẳng, đại học hoặc cao hơn");
+					edu_lvl = 1;
+					askQ02_01();
+				});
+			}
+			
+			function askQ02_01(){
+				if(kienThuc.length == 0){
+					askQ03();
+				}else{
+					showBotText("Bạn được dạy kiến thức ở những lĩnh vực nào?");
+					var parent = document.getElementById("textInput");
+					parent.replaceChildren();
+					
+					for(let i=0; i<kienThuc.length; ++i){
+						var btn = createChoice(kienThuc[i].linhVuc);
+						btn.id = kienThuc[i].id;
+						
+						btn.addEventListener("mouseover", function(){
+							var d = document.getElementById("detail");
+							d.innerHTML = kienThuc[i].moTa;
+						});
+						
+						btn.addEventListener("mouseout", function(){
+							var d = document.getElementById("detail");
+							d.innerHTML = "";
+						});
+						
+						parent.appendChild(btn);
+						parent.append(document.createElement("br"));
+					}
+					
+					var c_btn = createConfirm("Tiếp tục");
+					c_btn.addEventListener("click", function(){
+						responseQ02_01();
+					});
+				}
+			}
+			
+			function responseQ02_01(){
+				for(let i=0; i<kienThuc.length; ++i){
+					var x = document.getElementById(kienThuc[i].id);
+					if(x.className == "chosen"){
+						learned_knowledge.push(kienThuc[i].id);
+					}
+				}
+				console.log(learned_knowledge);
+				askQ03();
+			}
+			
+			function askQ03(){
+				var parent = document.getElementById("textInput");
+				parent.replaceChildren();
+				showBotText("Bạn sẵn sàng cho việc học (hoặc học lại) đến cấp độ nào nếu công việc yêu cầu?");
+				
+				console.log(laborAge);
+				
+				if(edu_lvl<1){
+					var btn1 = createConfirm("Hoàn thành chương trình GD bắt buộc là đủ");
+					btn1.addEventListener("click", function(){
+						willing_edu_lvl = 0;
+						showResponse("Hoàn thành chương trình GD bắt buộc là đủ");
+						if(laborAge == false){
+							sendFurtherInfo();
+						}
+						else{
+							askQ04();
+						}
+					});
+				}
+				
+				var btn2 = createConfirm("Hoàn thành chương trình GD phổ thông là đủ");
+				btn2.addEventListener("click", function(){
+					willing_edu_lvl = 1;
+					showResponse("Hoàn thành chương trình GD phổ thông là đủ");
+					if(laborAge == false){
+						sendFurtherInfo();
+					}
+					else{
+						askQ04();
+					}
+				});
+				
+				var btn3 = createConfirm("Học tiếp cao đẳng nếu cần");
+				btn3.addEventListener("click", function(){
+					willing_edu_lvl = 2;
+					showResponse("Học tiếp cao đẳng nếu cần");
+					if(laborAge == false){
+						sendFurtherInfo();
+					}
+					else{
+						askQ04();
+					}
+				});
+				
+				var btn4 = createConfirm("Học tiếp lên đại học nếu cần");
+				btn4.addEventListener("click", function(){
+					willing_edu_lvl = 3;
+					showResponse("Học tiếp lên đại học nếu cần");
+					if(laborAge == false){
+						sendFurtherInfo();
+					}
+					else{
+						askQ04();
+					}
+				});
+				
+				var btn5 = createConfirm("Hoàn thành khoá học Thạc sĩ nếu cần");
+				btn5.addEventListener("click", function(){
+					willing_edu_lvl = 5;
+					showResponse("Hoàn thành khoá học Thạc sĩ nếu cần");
+					if(laborAge == false){
+						sendFurtherInfo();
+					}
+					else{
+						askQ04();
+					}
+				});
+				
+				var btn6 = createConfirm("Học tiếp lên cấp độ Tiến sĩ nếu cần");
+				btn6.addEventListener("click", function(){
+					willing_edu_lvl = 7;
+					showResponse("Học tiếp lên cấp độ Tiến sĩ nếu cần");
+					if(laborAge == false){
+						sendFurtherInfo();
+					}
+					else{
+						askQ04();
+					}
+				});
+				
+				var btn7 = createConfirm("Tiếp tục chương trình đào tạo sau Tiến sĩ nếu cần");
+				btn7.addEventListener("click", function(){
+					willing_edu_lvl = 8;
+					showResponse("Tiếp tục chương trình đào tạo sau Tiến sĩ nếu cần");
+					if(laborAge == false){
+						sendFurtherInfo();
+					}
+					else{
+						askQ04();
+					}
+				});
+			}
+			
+			function askQ04(){
+				var parent = document.getElementById("textInput");
+				parent.replaceChildren();
+				
+				showBotText("Từng làm công việc nào trong 1 năm hoặc hơn chưa?");
+				
+				var btn1 = createConfirm("Rồi");
+				btn1.addEventListener("click", function(){
+					showResponse("Rồi");
+					askQ04_01();
+				})
+				
+				var btn2 = createConfirm("Chưa");
+				btn2.addEventListener("click", function(){
+					showResponse("Chưa");
+					sendFurtherInfo();
+				})
+			}
+			
+			function askQ04_01(){
+				if(kiNang.length == 0){
+					askQ04_02();
+				} else {
+					var parent = document.getElementById("textInput");
+					parent.replaceChildren();
+					
+					showBotText("Những công việc đó đòi hỏi những kĩ năng gì?");
+					
+					for(let i=0; i<kiNang.length; ++i){
+						var btn = createChoice(kiNang[i].ten);
+						btn.id = kiNang[i].id;
+						
+						btn.addEventListener("mouseover", function(){
+							var d = document.getElementById("detail");
+							d.innerHTML = kiNang[i].moTa;
+						});
+						
+						btn.addEventListener("mouseout", function(){
+							var d = document.getElementById("detail");
+							d.innerHTML = "";
+						});
+						
+						parent.appendChild(btn);
+						parent.append(document.createElement("br"));
+					}
+					
+					var c_btn = createConfirm("Tiếp tục");
+					c_btn.addEventListener("click", function(){
+						responseQ04_01();
+					});
+				}
+			}
+			
+			function responseQ04_01(){
+				for(let i=0; i<kiNang.length; ++i){
+					var x = document.getElementById(kiNang[i].id);
+					if(x.className == "chosen"){
+						used_skill.push(kiNang[i].id);
+					}
+				}
+				console.log(used_skill);
+				askQ04_02();
+			}
+			
+			function askQ04_02(){
+				if(kienThuc.length == 0){
+					sendFurtherInfo();
+				}else{
+					var parent = document.getElementById("textInput");
+					parent.replaceChildren();
+					
+					showBotText("Những công việc đó đòi hỏi kiến thức ở những lĩnh vực nào?");
+					
+					for(let i=0; i<kienThuc.length; ++i){
+						var btn = createChoice(kienThuc[i].linhVuc);
+						btn.id = kienThuc[i].id;
+						
+						btn.addEventListener("mouseover", function(){
+							var d = document.getElementById("detail");
+							d.innerHTML = kienThuc[i].moTa;
+						});
+						
+						btn.addEventListener("mouseout", function(){
+							var d = document.getElementById("detail");
+							d.innerHTML = "";
+						});
+						
+						parent.appendChild(btn);
+						parent.append(document.createElement("br"));
+					}
+					
+					var c_btn = createConfirm("Tiếp tục");
+					c_btn.addEventListener("click", function(){
+						responseQ04_02();
+					});
+				}
+			}
+			
+			function responseQ04_02(){
+				for(let i=0; i<kienThuc.length; ++i){
+					var x = document.getElementById(kienThuc[i].id);
+					if(x.className == "chosen"){
+						used_knowledge.push(kienThuc[i].id);
+					}
+				}
+				console.log(used_knowledge);
+				sendFurtherInfo();
+			}
+			
+			function sendFurtherInfo(){
+				var obj = {
+					"fav_knowledge": fav_knowledge,
+					"edu_lvl": edu_lvl,
+					"learned_knowledge": learned_knowledge,
+					"willing_edu_lvl": willing_edu_lvl, 
+					"used_skill": used_skill,
+					"used_knowledge": used_knowledge,
+				};
+				console.log(obj);
+				
+				var url = '/answer/further-info';
+				var xhr = new XMLHttpRequest();
+				xhr.open("POST", url, true);
+				xhr.setRequestHeader("Content-Type", "application/json");
+				
+				var data = JSON.stringify(obj);
+				xhr.send(data);
+
+				xhr.onreadystatechange = function () {
+					if (xhr.readyState === 4 && xhr.status === 200) {
+						jobs = JSON.parse(this.responseText);
+						console.log(jobs);
+						showJobs(jobs);
+					}
+				}
+			}
+			
+			function showJobs(jobs){
+				var parent = document.getElementById("textInput");
+				parent.replaceChildren();
+				
+				showBotText("Công việc phù hợp:");
+				for(let i=0; i<jobs.length; ++i){
+					showBotText((i+1) + ". " + jobs[i].ten);
+				}
+				
+				start();
+			}
+/*
+			function createChoice(text) {
+				var btn = document.createElement('button');
+				btn.className = "unchosen";
+				btn.innerHTML = text;
+				btn.addEventListener("click", function () {
+					//console.log(btn);
+					if (btn.className == "unchosen") {
+						btn.style.background = "deepskyblue";
+						btn.className = "chosen";
+					}
+					else {
+						btn.style.background = "powderblue";
+						btn.className = "unchosen";
+					}
+				});
+				btn.addEventListener("mouseover", function () {
+					if (btn.className == "unchosen") {
+						btn.style.background = "deepskyblue";
+					}
+				})
+				btn.addEventListener("mouseout", function () {
+					if (btn.className == "unchosen") {
+						btn.style.background = "powderblue";
+					}
+				})
+				return btn;
+			}
+*/
+
+
+			function showBotText(question) {
+				var para = document.createElement('p');
+				var para2 = document.createElement('span');
+				para2.innerHTML = question;
+				para.appendChild(para2);
+				para.className = 'botText';
+
+				var parent = document.getElementById('chatbox');
+				parent.appendChild(para);
+			}
+
+			function showResponse(response) {
+				var para = document.createElement('p');
+				var para2 = document.createElement('span');
+				para2.innerHTML = response;
+				para.appendChild(para2);
+				para.className = 'userText';
+
+				var parent = document.getElementById('chatbox');
+				parent.appendChild(para);
+				// document.getElementById('userInput').scrollIntoView({block: 'start', behavior: 'smooth'});
+			}
+			
+			function createChoice(text) {
+				var btn = document.createElement('button');
+				btn.className = "unchosen";
+				btn.innerHTML = text;
+				btn.addEventListener("click", function () {
+					if (btn.className == "unchosen") {
+						btn.className = "chosen";
+					}
+					else {
+						btn.className = "unchosen";
+					}
+				});
+				btn.addEventListener("mouseover", function () {
+					if (btn.className == "unchosen") {
+						btn.style.background = "deepskyblue";
+					}
+				})
+				btn.addEventListener("mouseout", function () {
+					if (btn.className == "unchosen") {
+						btn.style.background = "powderblue";
+					}
+				})
+				return btn;
+			}
+
+			function createConfirm(text) {
+				var btn = document.createElement('button');
+				btn.id = "confirm";
+				btn.innerHTML = text;
+				btn.style.background = "springgreen";
+				btn.addEventListener("mouseover", function () {
+					btn.style.background = "greenyellow";
+				})
+				btn.addEventListener("mouseout", function () {
+					btn.style.background = "springgreen";
+				})
+				var parent = document.getElementById("textInput");
+				parent.appendChild(btn);
+				parent.append(document.createElement("br"));
+				return btn;
+			}
+
+		</script>
+	</div>
+</body>
+
+</html>
